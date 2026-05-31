@@ -1,0 +1,205 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta http-equiv="X-UA-Compatible" content="ie=edge" />
+    
+    <!-- 100% 複製老師 Demo 的本地靜態資源引入路徑（一敲命令秒開、絕對不卡網速） -->
+    <link rel="stylesheet" href="{% static 'css/all.css' %}" />
+    <link rel="stylesheet" href="{% static 'css/bootstrap.css' %}" />
+    <link rel="stylesheet" href="{% static 'css/lightbox.min.css' %}" /> 
+    <link rel="stylesheet" href="{% static 'css/style.css' %}" />
+        <!-- 專案自訂：優化為高級莫蘭迪淺灰藍色調，層次感大幅提升 -->
+    <style>
+        body {
+            display: flex;
+            flex-direction: column;
+            min-height: 100vh;
+            /* 🌟 核心修正：從生硬的全白改為極高雅的莫蘭迪淺灰藍，非常耐看 🌟 */
+            background-color: #f0f4f8 !important;
+            font-family: system-ui, -apple-system, sans-serif;
+        }
+        /* 行政端 Topbar：企業深靛藍色 */
+        .office-topbar {
+            background-color: #1e3a8a !important;
+        }
+        /* 全站統一：高雅深藍灰色頁尾 */
+        .site-footer {
+            background-color: #2c3e50 !important;
+            color: #ecf0f1;
+            margin-top: auto;
+        }
+        /* 讓純白卡片在淺灰藍底色上完美浮現，質感如同大型商業網站 */
+        .card-custom {
+            background-color: #ffffff !important; /* 確保卡片維持純白 */
+            border: none;
+            border-radius: 12px;
+            /* 加上極細微的高級柔和陰影 */
+            box-shadow: 0 8px 24px rgba(149, 157, 165, 0.15) !important;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+        .card-custom:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 12px 32px rgba(149, 157, 165, 0.25) !important;
+        }
+    </style>
+
+
+    <!-- 專案自訂：校務端專屬配色與 RWD 輔助樣式 -->
+    {% comment %} <style>
+        body {
+            display: flex;
+            flex-direction: column;
+            min-height: 100vh;
+            background-color: #f8f9fa;
+            font-family: system-ui, -apple-system, sans-serif;
+        }
+        /* 行政端專屬：企業深靛藍色 */
+        .office-topbar {
+            background-color: #1e3a8a !important;
+        }
+        /* 全站統一：高雅深藍灰色頁尾 */
+        .site-footer {
+            background-color: #2c3e50 !important;
+            color: #ecf0f1;
+            margin-top: auto;
+        }
+        /* 專業級 RWD 卡片輔助樣式 */
+        .card-custom {
+            border: none;
+            border-radius: 12px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+            transition: transform 0.2s;
+        }
+        .card-custom:hover {
+            transform: translateY(-5px);
+        }
+    </style> {% endcomment %}
+
+    <title>School Management System | {% block title %}{% endblock %}</title>
+</head>
+<body>
+        <!-- RWD 頂部導覽列：100% 對齊老師本地相容規格 class="nav-item px-2" {% url 'main_base:index' %}-->
+    {% block navbar %}
+    <nav class="navbar navbar-expand-lg navbar-dark office-topbar shadow-sm py-3">
+        <div class="container-fluid px-4">
+            <a class="navbar-brand fw-bold" href="{% url 'main_base:index' %}">
+                <i class="fas fa-school me-2"></i> Academic Affairs Office      </a>
+            
+            <!-- 🌟 核心修正：對齊老師的舊版相容控制開關 🌟 -->
+            <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav ms-auto text-nowrap">
+                    {% comment %} {% if '/' == request.path %} class="nav-item active mr-3" {% else %} class="nav-item mr-3"{% endif %} {% endcomment %}
+                    <li class="nav-item px2">
+                        <a class="nav-link" href="{% url 'office:index' %}">Dashboard</a>
+                    </li>
+                    <li class="nav-item px-2">
+                        <a class="nav-link" href="{% url 'office:admin_teachers' %}">Teachers</a>
+                    </li>
+                    <li class="nav-item px-2">
+                        <a class="nav-link" href="{% url 'office:admin_classroom' %}">Classes</a>
+                    </li>
+                    <li class="nav-item px-2">
+                        <a class="nav-link" href="{% url 'office:admin_courses' %}">Courses</a>
+                    </li>
+                                        <li class="nav-item px-2">
+                        <a class="nav-link" href="{% url 'office:admin_students' %}">Students</a>
+                    </li>
+                    
+                    <!-- 🔒 鐵律補齊：動態安全登出鎖 (完美修復 405 新版 Django 相容性) -->
+                    {% if user.is_authenticated %}
+                        <li class="nav-item px-2 d-flex align-items-center">
+                            <span class="navbar-text text-white-50 me-2" style="font-size: 0.9rem;">👤 {{ user.username }}</span>
+                        </li>
+                        <li class="nav-item px-2 d-flex align-items-center">
+                            <!-- 🌟 將超連結改為 POST 安全表單，完美解除 405 封鎖 🌟 -->
+                            <form action="/users/logout/" method="POST" class="m-0 p-0">
+                                {% csrf_token %}
+                                
+                                <button type="submit" class="btn btn-sm btn-danger text-white px-3 fw-bold align-middle border-0">
+                                    
+                                    <i class="fas fa-sign-out-alt"></i> Logout
+                                </button>
+                            </form>
+                        </li>
+                    {% else %}
+                        <li class="nav-item px-2 d-flex align-items-center">
+                            <a class="btn btn-sm btn-primary text-white px-3 fw-bold align-middle" href="/users/login/">
+                                <i class="fas fa-sign-in-alt"></i> Login
+                            </a>
+                        </li>
+                    {% endif %}
+                </ul>
+
+            </div>
+        </div>
+    </nav>
+    {% endblock %}
+
+
+    <!-- 頂部公共導覽列（這裡稍後會由各個頁面繼承或客製化） -->
+        <!-- RWD 頂部導覽列：100% 齒輪對齊各大 App 命名空間 -->
+    {% comment %} {% block navbar %}
+    <nav class="navbar navbar-expand-lg navbar-dark office-topbar shadow-sm py-3">
+        <div class="container-fluid px-4">
+            <!-- 🌟 修正這裡：點擊 SchoolDemo2 一秒秒回大首頁 🌟 -->
+            <a class="navbar-brand fw-bold" href="{% url 'main_base:index' %}">
+                <i class="fas fa-school me-2"></i>SchoolDemo2
+            </a>
+            
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            
+            <!-- 右側 RWD 導覽按鈕：老老實實對齊您專案的實體路由名稱 -->
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav ms-auto text-nowrap">
+                    <li class="nav-item px-2">
+                        <a class="nav-link active" href="{% url 'office:index' %}">Dashboard</a>
+                    </li>
+                    <li class="nav-item px-2">
+                        <a class="nav-link" href="{% url 'office:admin_teachers' %}">Teachers</a>
+                    </li>
+                    <li class="nav-item px-2">
+                        <a class="nav-link" href="{% url 'office:admin_classroom' %}">Classes</a>
+                    </li>
+                    <li class="nav-item px-2">
+                        <a class="nav-link" href="{% url 'office:admin_courses' %}">Courses</a>
+                    </li>
+                    <li class="nav-item px-2">
+                        <a class="nav-link" href="{% url 'office:admin_students' %}">Students</a>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </nav>
+    {% endblock %} {% endcomment %}
+
+
+    <!-- 主內容呈現區：自動支援 RWD 響應式佈局 -->
+    <main class="container py-5">
+        {% block content %} {% endblock %}
+    </main>
+
+    <!-- 全站 10 個頁面底部完美加載：高雅深藍灰色 Footer -->
+    <footer class="site-footer py-4 text-center border-top border-secondary border-opacity-25">
+        <div class="container">
+            <p class="mb-0 fw-semibold">&copy; 2026 SmartSchool. Designed with Bootstrap 5 & RWD.</p>
+        </div>
+    </footer>
+
+    <!-- 100% 複製老師 Demo 的本地 JavaScript 載入順序，確保下拉功能與漢堡選單完美工作 -->
+    <script src="{% static 'js/jquery-3.3.1.min.js' %}"></script>
+    <script src="{% static 'js/bootstrap.bundle.min.js' %}"></script>
+    <script src="{% static 'js/main.js' %}"></script>
+    <script src="{% static 'js/lightbox.min.js' %}"></script>
+    <script src="{% static 'js/modal.js' %}"></script>
+    
+</body>
+</html>

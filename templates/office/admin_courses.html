@@ -1,0 +1,78 @@
+{% extends 'base.html' %}
+
+{% block title %}Course Catalog - Admin{% endblock %}
+
+{% block content %}
+<div class="container-fluid px-0">
+    <div class="mb-4 pb-2 border-bottom">
+        <h2 class="fw-bold text-dark mb-1">Course Catalog Management</h2>
+        <p class="text-muted mb-0">Review curriculum codes, credit distribution, and core description guidelines.</p>
+    </div>
+
+    <div class="card card-custom bg-white border-0 shadow-sm p-4">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+                <thead class="table-light text-secondary">
+                    <tr>
+                        <th>Code</th>
+                        <th>Course Name</th>
+                        <th>Credits</th>
+                        <th>Detailed Description</th>
+                    </tr>
+                </thead>
+                <tbody>
+    {% if courses %}
+        {% for course in courses %}
+        <tr>
+            <td class="fw-bold text-dark">{{ course.code }}</td>
+            <td class="fw-bold text-primary">{{ course.name }}</td>
+            <td><span class="badge bg-light text-secondary border">{{ course.credits|default:"3" }} Credits</span></td>
+            <td>
+                {% if course.teacher %}
+                    <span class="badge bg-success bg-opacity-10 text-success fw-bold">👨‍🏫 {{ course.teacher.first_name }}</span>
+                {% else %}
+                    <span class="badge bg-secondary bg-opacity-10 text-muted">⚠️ 未指派老師</span>
+                {% endif %}
+            </td>
+            <td><p class="text-muted small mb-0">{{ course.description|default:"No description provided." }}</p></td>
+        </tr>
+        {% endfor %}
+    {% else %}
+        <tr>
+            <td colspan="5" class="text-center py-4 text-muted">目前沒有任何課程資料，請使用上方表單新增。</td>
+        </tr>
+    {% endif %}
+</tbody>
+
+            </table>
+        </div>
+                <!-- 🌟 萬能通用相容版：課程大數據分頁按鈕 🌟 -->
+        {% if courses.has_other_pages %}
+        <nav aria-label="Page navigation" class="mt-4">
+            <ul class="pagination justify-content-center mb-0">
+                {% if courses.has_previous %}
+                    <li class="page-item"><a class="page-link" href="?page={{ courses.previous_page_number }}">&laquo; Previous</a></li>
+                {% else %}
+                    <li class="page-item disabled"><span class="page-link">&laquo; Previous</span></li>
+                {% endif %}
+
+                {% for i in courses.paginator.page_range %}
+                    {% if courses.number == i %}
+                        <li class="page-item active"><span class="page-link" style="background-color: #1e3a8a; border-color: #1e3a8a; color: white;">{{ i }}</span></li>
+                    {% else %}
+                        <li class="page-item"><a class="page-link" href="?page={{ i }}">{{ i }}</a></li>
+                    {% endif %}
+                {% endfor %}
+
+                {% if courses.has_next %}
+                    <li class="page-item"><a class="page-link" href="?page={{ courses.next_page_number }}">Next &raquo;</a></li>
+                {% else %}
+                    <li class="page-item disabled"><span class="page-link">Next &raquo;</span></li>
+                {% endif %}
+            </ul>
+        </nav>
+        {% endif %}
+
+    </div>
+</div>
+{% endblock %}

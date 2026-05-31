@@ -1,0 +1,97 @@
+{% extends 'base.html' %}
+
+{% block title %}New Registration - School System{% endblock %}
+
+{% block content %}
+<div class="container py-5">
+    <div class="row">
+        <!-- RWD 佈局：手機版佔滿 12 欄，電腦版自動居中佔 6 欄 -->
+        <div class="col-12 col-md-8 col-lg-6 mx-auto">
+            <div class="card card-custom p-4 bg-white border-0 shadow">
+                <div class="card-body">
+                    <h3 class="fw-bold text-center text-dark mb-2">New Registration</h3>
+                    <p class="text-muted text-center small mb-4">Register as a New Student or newly hired Faculty member.</p>
+                    
+                    <!-- 註冊登記表單 -->
+                    <form action="{% url 'users:register' %}" method="POST">
+                        {% csrf_token %}
+                        
+                        <!-- 1. 登記身份選擇 -->
+                        <div class="mb-3">
+                            <label for="regRole" class="form-label fw-semibold text-secondary">I want to register as:</label>
+                            <select class="form-select" id="regRole" name="role" onchange="toggleTeacherFields()" required>
+                                <option value="" disabled selected>-- Select your identity --</option>
+                                <option value="student">New Student (新生)</option>
+                                <option value="teacher">Newly Hired Teacher (新聘老師)</option>
+                            </select>
+                        </div>
+
+                        <!-- 2. 基本資料欄位（RWD 左右並排網格） -->
+                        <div class="row g-3 mb-3">
+                            <div class="col-12 col-sm-6">
+                                <label for="firstName" class="form-label fw-semibold text-secondary">First Name</label>
+                                <input type="text" class="form-control" id="firstName" name="first_name" placeholder="John" required>
+                            </div>
+                            <div class="col-12 col-sm-6">
+                                <label for="lastName" class="form-label fw-semibold text-secondary">Last Name</label>
+                                <input type="text" class="form-control" id="lastName" name="last_name" placeholder="Doe" required>
+                            </div>
+                        </div>
+
+                        <!-- 3. 電子郵件欄位 -->
+                        <div class="mb-3">
+                            <label for="email" class="form-label fw-semibold text-secondary">Email Address</label>
+                            <input type="email" class="form-control" id="email" name="email" placeholder="name@school.edu" required>
+                        </div>
+
+                        <!-- 🌟 核心設計：老師專屬自訂欄位區塊（預設隱藏，選老師時動態顯示） -->
+                        <div id="teacherFields" style="display: none;" class="p-3 bg-light rounded-3 mb-3 border">
+                            <h6 class="fw-bold text-dark mb-3"><i class="fas fa-id-card text-primary me-2"></i>Faculty Specific Details</h6>
+                            
+                            <!-- 老師模型硬性需求：性別欄位 -->
+                            <div class="mb-3">
+                                <label for="gender" class="form-label fw-semibold text-secondary">Gender</label>
+                                <select class="form-select" id="gender" name="gender">
+                                    <option value="O">Other / Decline to state</option>
+                                    <option value="M">Male</option>
+                                    <option value="F">Female</option>
+                                </select>
+                            </div>
+                            
+                            <!-- 老師模型硬性需求：本人專長介紹欄位 -->
+                            <div class="mb-0">
+                                <label for="specialty" class="form-label fw-semibold text-secondary">Professional Specialty Introduction</label>
+                                <textarea class="form-control" id="specialty" name="specialty" rows="3" placeholder="Describe your teaching expertise and academic background..."></textarea>
+                            </div>
+                        </div>
+
+                        <!-- 提交按鈕 -->
+                        <div class="d-grid mt-4">
+                            <button type="submit" class="btn btn-outline-primary btn-lg fw-semibold py-3">
+                                <i class="fas fa-paper-plane me-2"></i>Submit Registration
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 控制欄位動態顯示的純前端腳本，不造成任何後端解析負擔 -->
+<script>
+function toggleTeacherFields() {
+    const role = document.getElementById('regRole').value;
+    const teacherFields = document.getElementById('teacherFields');
+    const genderSelect = document.getElementById('gender');
+    
+    if (role === 'teacher') {
+        teacherFields.style.display = 'block';
+        genderSelect.setAttribute('required', 'required');
+    } else {
+        teacherFields.style.display = 'none';
+        genderSelect.removeAttribute('required');
+    }
+}
+</script>
+{% endblock %}

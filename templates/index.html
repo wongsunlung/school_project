@@ -1,0 +1,47 @@
+{% extends 'base.html' %}
+
+{% block title %}Welcome - School Management System{% endblock %}
+
+{% block content %}
+<div class="container py-5">
+    <!-- RWD 巨幕迎賓區：電腦版橫排、手機版直排 -->
+    <div class="row align-items-center g-5 py-4">
+        <div class="col-12 col-lg-7 text-center text-lg-start">
+            <h1 class="display-4 fw-bold lh-1 text-dark mb-3">
+                Welcome to <span style="color: #1e3a8a;">SmartSchool</span>
+            </h1>
+            <p class="col-lg-10 fs-5 text-muted mb-4">
+                A highly secure, efficient, and responsive academic gateway. Designed for modern administrators, professors, and students to seamlessly coordinate school resources.
+            </p>
+        </div>
+        
+        <!-- 右側：引導卡片區 -->
+        <div class="col-12 col-md-8 col-lg-5 mx-auto">
+            <div class="card card-custom p-4 bg-white border-0 shadow">
+                <div class="card-body">
+                    <h4 class="fw-bold text-center text-dark mb-4">Portal Gateway</h4>
+                    
+                    <!-- 登入入口按鈕 -->
+                    <div class="d-grid mb-3">
+                        <a href="/users/login/" class="btn btn-primary btn-lg shadow-sm fw-semibold py-3" style="background-color: #1e3a8a; border: none;">
+                            <i class="fas fa-sign-in-alt me-2"></i>Sign In to Portal
+                        </a>
+                    </div>
+                    
+                    <div class="text-center my-3 text-muted">
+                        <hr class="my-4">
+                        <small class="fw-bold text-uppercase tracking-wider">New to the System?</small>
+                    </div>
+                    
+                    <!-- 🌟 滿足新需求的註冊登記入口按鈕 -->
+                    <div class="d-grid">
+                        <a href="/users/register/" class="btn btn-outline-secondary btn-lg fw-semibold py-3">
+                            <i class="fas fa-user-plus me-2"></i>New Registration
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
