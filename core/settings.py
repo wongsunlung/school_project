@@ -85,7 +85,7 @@ WSGI_APPLICATION = 'core.wsgi.application'
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.postgresql',
-        'NAME': 'school_hw_db',      # 📌 關鍵修改：改成您剛在 pgAdmin 建的全新資料庫名稱
+        'NAME': 'school_clean',      # 📌 關鍵修改：改成您剛在 pgAdmin 建的全新資料庫名稱
         'USER': 'postgres',          # 您的 PostgreSQL 帳號
         'PASSWORD': '123456', # 您的 PostgreSQL 密碼
         'HOST': '127.0.0.1',

@@ -1,0 +1,33 @@
+# main_base/migrations/0002_auto_20260601_0943.py
+from django.db import migrations, models
+import django.db.models.deletion
+
+class Migration(migrations.Migration):
+
+    dependencies = [
+        ('main_base', '0001_initial'),  # 確保對齊你的一號初始地基
+    ]
+
+    operations = [
+        # 1. 強行在資料庫建立 school_enrollments 選課分數表
+        migrations.CreateModel(
+            name='Enrollment',
+            fields=[
+                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
+                ('score', models.DecimalField(blank=True, decimal_places=2, max_digits=5, null=True)),
+                ('attendance_rate', models.DecimalField(decimal_places=2, default=100.0, max_digits=5)),
+                ('course', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='enrollments', to='main_base.course')),
+                ('student', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='enrollments', to='main_base.student')),
+            ],
+            options={
+                'db_table': 'school_enrollments',
+                'unique_together': {('student', 'course')},
+            },
+        ),
+        # 2. 強行把 courses 多對多關係織網焊進 Student 身上
+        migrations.AddField(
+            model_name='student',
+            name='courses',
+            field=models.ManyToManyField(related_name='students', through='main_base.Enrollment', to='main_base.course'),
+        ),
+    ]

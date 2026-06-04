@@ -1,0 +1,116 @@
+{% extends 'base.html' %}
+
+{% block title %}Student Attendance - Faculty{% endblock %}
+
+{% block content %}
+<div class="container-fluid px-0">
+    
+    <!-- Top Header & Navigation Section -->
+    <div class="d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center mb-4 pb-3 border-bottom">
+        <div>
+            <h2 class="fw-bold text-dark mb-1">Daily Attendance Sheets</h2>
+            <p class="text-muted mb-0">Select your active class, verify student presence, and log daily roll call records.</p>
+        </div>
+        
+        <!-- Action Menu & Back Portal Buttons -->
+        <div class="mt-3 mt-md-0 d-flex gap-2">
+            <div class="dropdown" style="display: inline-block;">
+                <button class="btn btn-white border shadow-sm dropdown-toggle fw-semibold" type="button" id="attendActionDrop" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                    <i class="fas fa-star text-warning me-1"></i> Quick Tasks
+                </button>
+                <div class="dropdown-menu dropdown-menu-right shadow border-0" aria-labelledby="attendActionDrop">
+                    <a class="dropdown-item py-2" href="{% url 'teachers:attendance' %}"><i class="fas fa-calendar-check me-2 text-success"></i>Take Attendance</a>
+                    <a class="dropdown-item py-2" href="{% url 'teachers:grades' %}"><i class="fas fa-marker me-2 text-danger"></i>Input Grades</a>
+                </div>
+            </div>
+            <a href="{% url 'teachers:index' %}" class="btn btn-primary shadow-sm" style="background-color: #1e3a8a; border: none;">
+                <i class="fas fa-arrow-left me-1"></i> Back to Portal
+            </a>
+        </div>
+    </div>
+
+    <!-- Responsive Roll Call Table Card -->
+    <div class="card card-custom bg-white border-0 shadow-sm p-4">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+                <thead class="table-light text-secondary">
+                    <tr>
+                        <th>Student Name</th>
+                        <th>Student ID</th>
+                        <th class="text-center" style="width: 180px;">Mark Present</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <!-- 🌟 點名頁面同步解鎖：動態循環讀取主地基資料庫 🌟 -->
+                    {% if students %}
+                        {% for student in students %}
+                        <tr>
+                            <td class="fw-semibold text-dark">{{ student.first_name }} {{ student.last_name }}</td>
+                            <td class="text-muted small">{{ student.student_id }}</td>
+                            <td class="text-center">
+                                <input type="checkbox" class="form-check-input" {% if student.is_active %}checked{% endif %} style="width: 22px; height: 22px; cursor: pointer;" onclick="syncAttendance('{{ student.id }}', '{{ student.first_name }} {{ student.last_name }}', this.checked)">
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    {% else %}
+                        <tr>
+                            <td colspan="3" class="text-center py-4 text-muted">No database student records active. Please check admin console.</td>
+                        </tr>
+                    {% endif %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- Real-time Synchronization Script Bridge -->
+<script>
+    function syncAttendance(studentId, studentName, isPresent) {
+        const statusText = isPresent ? "PRESENT" : "ABSENT";
+        
+        fetch("{% url 'teachers:api_update_attendance' %}", {
+            method: 'POST',
+            headers: { 
+                'Content-Type': 'application/json',
+                'X-CSRFToken': '{{ csrf_token }}'
+            },
+            body: JSON.stringify({ id: studentId, status: isPresent })
+        })
+        .then(res => res.json())
+        .then(data => console.log('[API Sync]', data));
+
+        showToast(studentName, `Marked as ${statusText}`, isPresent ? '#198754' : '#dc3545', 'fa-sync');
+    }
+
+    // Dropdown Fix
+    document.getElementById('attendActionDrop').addEventListener('click', function(e) {
+        e.preventDefault();
+        var menu = this.nextElementSibling;
+        menu.classList.toggle('show');
+    });
+    document.addEventListener('click', function(e) {
+        var dropBtn = document.getElementById('attendActionDrop');
+        if (dropBtn && !dropBtn.contains(e.target)) {
+            var menu = dropBtn.nextElementSibling;
+            if (menu) menu.classList.remove('show');
+        }
+    });
+
+    function showToast(name, message, bgColor, icon) {
+        const toast = document.createElement('div');
+        toast.style.position = 'fixed';
+        toast.style.top = '20px';
+        toast.style.right = '20px';
+        toast.style.zIndex = '9999';
+        toast.style.background = bgColor;
+        toast.style.color = '#ffffff';
+        toast.style.padding = '12px 24px';
+        toast.style.borderRadius = '8px';
+        toast.style.boxShadow = '0 4px 12px rgba(0,0,0,0.15)';
+        toast.style.fontWeight = '600';
+        toast.innerHTML = `<i class="fas ${icon} me-2"></i> ${name}: ${message}`;
+        document.body.appendChild(toast);
+        setTimeout(() => toast.remove(), 2000);
+    }
+</script>
+{% endblock %}

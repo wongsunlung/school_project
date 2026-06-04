@@ -12,4 +12,6 @@ urlpatterns = [
     path('timetable/', views.timetable_view, name='timetable'),
     path('report/', views.grades_report_view, name='grades_report'),
     path('enroll/', views.enroll_view, name='enroll'),
+    # 在你的 student/urls.py 的 urlpatterns 內加上這一行：
+    path('profile/', views.student_profile_view, name='profile'),
 ]

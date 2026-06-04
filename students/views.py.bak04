@@ -1,0 +1,143 @@
+from django.shortcuts import render, redirect, get_object_or_404
+from django.contrib.auth.decorators import login_required
+from django.contrib import messages
+# 🟢 這一行是核心！必須把 Student 與多對多的 Enrollment 中間表模型引入進來
+from main_base.models import Student, Enrollment, Course
+
+
+# def student_index(request):
+#     """🎓 1. 學生端 Portal 主首頁 (100% 精準對齊 urls.py)"""
+#     return render(request, 'students/student.html')
+# @login_required(login_url='users:login')
+# def student_index(request):
+#     """1. 學生端首頁 Dashboard (🔒 必須登入)"""
+#     # 根據登入的 user 撈出對應的學生資料
+#     # student = get_object_or_404(Student, email=request.user.email)
+#     student = Student.objects.filter(email=request.user.email).first()
+#     if not student:
+#         student = Student.objects.first() # 如果找不到，直接抓資料庫現有的隨機第一筆學生做測試
+#         if not student:
+#             messages.error(request, "資料庫內目前沒有任何學生資料，請先至行政端或後台建立。")
+#             return redirect("office:office_index")
+#     # 🟢 從 Enrollment 中間表，拉出該學生所有已选的課
+#     enrollments = Enrollment.objects.filter(student=student)
+    
+#     context = {
+#         "student": student,
+#         "total_courses": enrollments.count(),
+#         "school_class": student.school_class,
+#     }
+#     # return render(request, 'students/.html', context)
+#     # 🟢 修正後的安全通車寫法：
+# # 既然首頁 HTML 檔名有平行時空，我們直接讓學生一登入，就一秒無縫導航到「已經 100% 驗證成功、能渲染」的時間表頁面！
+#     return redirect('students:timetable')
+@login_required(login_url='users:login')
+def student_index(request):
+    """1. 學生端首頁 Dashboard (🔒 必須登入)"""
+    # 根據登入的 user 撈出對應的學生資料
+    student = Student.objects.filter(email=request.user.email).first()
+    if not student:
+        student = Student.objects.first() # 如果找不到，直接抓資料庫現有的隨機第一筆學生做測試
+        if not student:
+            messages.error(request, "資料庫內目前沒有任何學生資料，請先至行政端或後台建立。")
+            return redirect("office:office_index")
+            
+    # 🟢 修正 1：加上 select_related('course') 加速讀取，並準備好選課資料
+    enrollments = Enrollment.objects.filter(student=student).select_related('course')
+    
+    # 🟢 修正 2：把 enrollments 加入 context，這樣 student.html 才能讀取到資料！
+    context = {
+        "student": student,
+        "total_courses": enrollments.count(),
+        "school_class": student.school_class,
+        "enrollments": enrollments,  
+    }
+    
+    # 🟢 修正 3：把原本的 redirect 改回 render，讓 Django 乖乖去讀取你的 student.html
+    return render(request, 'students/student.html', context)
+
+
+# def timetable_view(request):
+#     """🎓 2. 學生端 - 週課表 (100% 精準對齊 urls.py)"""
+#     return render(request, 'students/timetable.html')
+@login_required(login_url='users:login')
+def timetable_view(request):
+    """2. 學生課表/時間表視圖 (🔒 必須登入)"""
+    # student = get_object_or_404(Student, email=request.user.email)
+    student = Student.objects.filter(email=request.user.email).first()
+    if not student:
+        student = Student.objects.first() # 如果找不到，直接抓資料庫現有的隨機第一筆學生做測試
+        if not student:
+            messages.error(request, "資料庫內目前沒有任何學生資料，請先至行政端或後台建立。")
+            return redirect("office:office_index")
+    # 🟢 織網多對多：精準撈出該學生在 Enrollment 裡綁定的所有課程物件
+    enrollments = Enrollment.objects.filter(student=student).select_related('course')
+    my_courses = [e.course for e in enrollments]
+    
+    context = {
+        "student": student,
+        "courses": my_courses,  # 傳送真實選課列表給功課表前端
+        "school_class": student.school_class,
+    }
+    return render(request, 'students/timetable.html', context)
+
+def enroll_view(request):
+    """🎓 3. 學生端 - 線上選課 (100% 精準對齊 urls.py，解鎖死機死結！)"""
+    return render(request, 'students/enroll.html')
+
+@login_required(login_url='users:login')
+def grades_report_view(request):
+    """3. 學生分數報告/成績單視圖 (🔒 必須登入)"""
+    # student = get_object_or_404(Student, email=request.user.email)
+    student = Student.objects.filter(email=request.user.email).first()
+    if not student:
+        student = Student.objects.first() # 如果找不到，直接抓資料庫現有的隨機第一筆學生做測試
+        if not student:
+            messages.error(request, "資料庫內目前沒有任何學生資料，請先至行政端或後台建立。")
+            return redirect("office:office_index")
+    # 🟢 真金白銀防線：直接把帶有 score（分數）的 Enrollment 紀錄整條拋給前端
+    # 這樣前端 HTML 才能用 {{ enrollment.course.name }} 和 {{ enrollment.score }} 渲染，一秒破開死白！
+    my_grades = Enrollment.objects.filter(student=student).select_related('course')
+    
+    context = {
+        "student": student,
+        "grades": my_grades,  # 包含課程與專屬成績的中間表數據
+        "school_class": student.school_class,
+    }
+    return render(request, 'students/grades_report.html', context)
+
+# def grades_report_view(request):
+#     """🎓 4. 學生端 - 核心成績單 (100% 精準對齊 urls.py，多對多動態對接主地基)"""
+#     try:
+#         # 模擬測試：直接撈出主地基資料庫的第一個學生
+#         student = Student.objects.first()
+#     except:
+#         student = None
+
+#     if student:
+#         # 直連新多對多地基：去 Enrollment 撈出專屬於這名學生的所有選課紀錄
+#         enrollments = Enrollment.objects.filter(student=student).select_related('course', 'course__teacher')
+        
+#         # 大數據即時算平均
+#         total_score = 0
+#         total_attendance = 0
+#         count = enrollments.count()
+        
+#         for emp in enrollments:
+#             total_score += emp.score if emp.score else 0
+#             total_attendance += emp.attendance_rate if emp.attendance_rate else 100
+        
+#         avg_score = total_score / count if count > 0 else 0.0
+#         total_attendance_rate = total_attendance / count if count > 0 else 100.0
+#     else:
+#         enrollments = []
+#         avg_score = 0.0
+#         total_attendance_rate = 100.0
+
+#     context = {
+#         'student': student,
+#         'enrollments': enrollments,
+#         'avg_score': avg_score,
+#         'total_attendance_rate': total_attendance_rate,
+#     }
+#     return render(request, 'students/grades_report.html', context)

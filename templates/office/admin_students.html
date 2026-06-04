@@ -5,13 +5,11 @@
 {% block content %}
 <div class="container-fluid px-0">
     
-    <!-- 頂部標題區 -->
     <div class="mb-4 pb-2 border-bottom">
         <h2 class="fw-bold text-dark mb-1">Student Academic Records</h2>
         <p class="text-muted mb-0">Approve new student online registration requests, filter profiles, and verify admission eligibility.</p>
     </div>
 
-    <!-- Django 訊息通知彈窗 -->
     {% if messages %}
         {% for message in messages %}
             <div class="alert alert-{% if message.tags == 'error' %}danger{% else %}success{% endif %} alert-dismissible fade show shadow-sm mb-4" role="alert">
@@ -23,7 +21,6 @@
         {% endfor %}
     {% endif %}
 
-    <!-- B Plan 聰明複合搜尋框 -->
     <div class="card card-custom bg-white border-0 shadow-sm p-3 mb-4">
         <form action="{% url 'office:admin_students' %}" method="GET" class="row g-2 align-items-center">
             <div class="col-12 col-md-9">
@@ -40,7 +37,6 @@
         </form>
     </div>
 
-    <!-- 數據表格卡片 -->
     <div class="card card-custom bg-white border-0 shadow-sm p-4">
         <div class="table-responsive">
             <table class="table table-hover align-middle mb-0">
@@ -48,7 +44,7 @@
                     <tr>
                         <th>Student ID</th>
                         <th>Full Name</th>
-                        <th>Email Address</th>
+                        <th>Email Address & Course Records</th>
                         <th>Class Status</th>
                         <th class="text-center" style="width: 250px;">Enrollment Status & Actions</th>
                     </tr>
@@ -60,66 +56,50 @@
                             <td class="fw-bold text-secondary">{{ student.student_id }}</td>
                             <td class="text-dark fw-semibold">{{ student.first_name }} {{ student.last_name }}</td>
                             <td>
-    <!-- 1. 原本的 Email 顯示 -->
-    <div class="fw-bold text-secondary" style="font-size: 0.95rem;">{{ student.email }}</div>
-    
-    <!-- 2. 🌟 學生端大數據莫蘭迪小標籤 🌟 -->
-    <div class="mt-2 d-flex flex-wrap gap-2">
-        {% if student.course %}
-            <span class="badge rounded-pill text-dark px-2 py-1" style="background-color: #e0f2fe; font-size: 0.75rem; font-weight: 500; border: 1px solid #bae6fd;">
-                📘 課程: {{ student.course.name }}
-            </span>
-            <span class="badge rounded-pill text-dark px-2 py-1" style="background-color: #f1f5f9; font-size: 0.75rem; font-weight: 500; border: 1px solid #e2e8f0;">
-                👨‍🏫 老師: {% if student.course.teacher %}{{ student.course.teacher.first_name }}{% else %}未指派{% endif %}
-            </span>
-            <span class="badge rounded-pill text-dark px-2 py-1" style="background-color: #dcfce7; font-size: 0.75rem; font-weight: 500; border: 1px solid #bbf7d0;">
-                💯 分數: {{ student.score|default:"0.0" }} 分
-            </span>
-            <span class="badge rounded-pill text-dark px-2 py-1" style="background-color: #fef9c3; font-size: 0.75rem; font-weight: 500; border: 1px solid #fef08a;">
-                ⏱️ 出席: {{ student.attendance_rate|default:"100.0" }}%
-            </span>
-        {% else %}
-            <span class="badge rounded-pill bg-light text-muted px-2 py-1" style="font-size: 0.75rem; border: 1px solid #e2e8f0;">
-                💨 尚未選課 (請至後台指派)
-            </span>
-        {% endif %}
-    </div>
-</td>
-
+                                <div class="fw-bold text-secondary mb-2" style="font-size: 0.95rem;">{{ student.email }}</div>
+                                
+                                <div class="d-flex flex-column gap-2">
+                                    {% if student.enrollments.all %}
+                                        {% for enrollment in student.enrollments.all %}
+                                            <div class="d-flex flex-wrap gap-2">
+                                                <span class="badge rounded-pill text-dark px-2 py-1" style="background-color: #e0f2fe; font-size: 0.75rem; font-weight: 500; border: 1px solid #bae6fd;">📘 Course: {{ enrollment.course }}</span>
+                                                <span class="badge rounded-pill text-dark px-2 py-1" style="background-color: #f1f5f9; font-size: 0.75rem; font-weight: 500; border: 1px solid #e2e8f0;">👨‍🏫 Teacher: {% if enrollment.course.teacher %}{{ enrollment.course.teacher.first_name }}{% else %}Unassigned{% endif %}</span>
+                                                <span class="badge rounded-pill text-dark px-2 py-1" style="background-color: #dcfce7; font-size: 0.75rem; font-weight: 500; border: 1px solid #bbf7d0;">💯 Score: {% if enrollment.score %}{{ enrollment.score }}{% else %}N/A{% endif %} </span>
+                                                <span class="badge rounded-pill text-dark px-2 py-1" style="background-color: #fef9c3; font-size: 0.75rem; font-weight: 500; border: 1px solid #fef08a;">⏱️ Attd: {{ enrollment.attendance_rate }}%</span>
+                                            </div>
+                                        {% endfor %}
+                                    {% else %}
+                                        <div>
+                                            <span class="badge rounded-pill bg-light text-muted px-2 py-1" style="font-size: 0.75rem; border: 1px solid #e2e8f0;">💨 No Course Selected</span>
+                                        </div>
+                                    {% endif %}
+                                </div>
+                            </td>
                             <td>
                                 {% if student.school_class %}
                                     <span class="badge bg-light text-dark border">{{ student.school_class.name }}</span>
                                 {% else %}
-                                    <span class="text-muted small italic">Not Placed (未分班)</span>
+                                    <span class="text-muted small italic">Not Placed</span>
                                 {% endif %}
                             </td>
                             <td class="text-center">
-                                <!-- 🌟 權限控制核心：判斷目前的用戶身份 🌟 -->
                                 {% if student.is_active %}
-                                    <!-- 正式學生：任何人都可以看見安全綠標 -->
                                     <span class="badge bg-success bg-opacity-10 text-success px-3 py-2 fw-bold"><i class="fas fa-user-check me-1"></i>Officially Enrolled</span>
                                 {% else %}
-                                    <!-- 待審核新生：🌟 唯有當 is_admin_mode 為 True 時，才會對管理員亮起審核大按鈕 🌟 -->
                                     {% if is_admin_mode %}
                                         <div class="mb-2">
                                             <span class="badge bg-warning bg-opacity-15 text-warning px-2 py-1 fw-bold mb-2"><i class="fas fa-hourglass-half me-1"></i>Pending Admission</span>
                                         </div>
                                         <div class="d-flex justify-content-center gap-2">
-                                            <!-- 🟩 核准入學按鈕表單 -->
                                             <form action="{% url 'office:admin_students' %}" method="POST" style="display:inline;">
                                                 {% csrf_token %}
                                                 <input type="hidden" name="approve_student_id" value="{{ student.id }}">
-                                                <button type="submit" class="btn btn-sm btn-success px-2 fw-semibold">
-                                                    <i class="fas fa-check me-1"></i>Approve
-                                                </button>
+                                                <button type="submit" class="btn btn-sm btn-success px-2 fw-semibold"><i class="fas fa-check me-1"></i>Approve</button>
                                             </form>
-                                            <!-- 🟥 拒絕入學按鈕表單 -->
-                                            <form action="{% url 'office:admin_students' %}" method="POST" style="display:inline;" onsubmit="return confirm('Reject and delete this student admission request permanently?');">
+                                            <form action="{% url 'office:admin_students' %}" method="POST" style="display:inline;" onsubmit="return confirm('Reject permanently?');">
                                                 {% csrf_token %}
                                                 <input type="hidden" name="reject_student_id" value="{{ student.id }}">
-                                                <button type="submit" class="btn btn-sm btn-outline-danger px-2 fw-semibold">
-                                                    <i class="fas fa-ban me-1"></i>Reject
-                                                </button>
+                                                <button type="submit" class="btn btn-sm btn-outline-danger px-2 fw-semibold"><i class="fas fa-ban me-1"></i>Reject</button>
                                             </form>
                                         </div>
                                     {% endif %}
@@ -128,40 +108,38 @@
                         </tr>
                         {% endfor %}
                     {% else %}
-                        <tr>
-                            <td colspan="5" class="text-center py-4 text-muted">No matching student profiles found. New applicants must register via the web entrance.</td>
-                        </tr>
+                        <tr><td colspan="5" class="text-center py-4 text-muted">No matching student profiles found.</td></tr>
                     {% endif %}
                 </tbody>
             </table>
         </div>
 
-        <!-- Paginator 分頁器 -->
         {% if students.has_other_pages %}
-        <nav aria-label="Page navigation" class="mt-4">
-            <ul class="pagination justify-content-center mb-0">
-                {% if students.has_previous %}
-                    <li class="page-item"><a class="page-link" href="?page={{ students.previous_page_number }}{% if request.GET.keywords %}&keywords={{ request.GET.keywords }}{% endif %}">&laquo; Previous</a></li>
-                {% else %}
-                    <li class="page-item disabled"><span class="page-link">&laquo; Previous</span></li>
-                {% endif %}
-
-                {% for i in students.paginator.page_range %}
-                    {% if students.number == i %}
-                        <li class="page-item active"><span class="page-link" style="background-color: #1e3a8a; border-color: #1e3a8a;">{{ i }}</span></li>
+            <nav aria-label="Page navigation" class="mt-4">
+                <ul class="pagination justify-content-center mb-0">
+                    {% if students.has_previous %}
+                        <li class="page-item"><a class="page-link" href="?page={{ students.previous_page_number }}{% if request.GET.keywords %}&keywords={{ request.GET.keywords }}{% endif %}">Previous</a></li>
                     {% else %}
-                        <li class="page-item"><a class="page-link" href="?page={{ i }}{% if request.GET.keywords %}&keywords={{ request.GET.keywords }}{% endif %}">{{ i }}</a></li>
+                        <li class="page-item disabled"><span class="page-link">Previous</span></li>
                     {% endif %}
-                {% endfor %}
+                    
+                    {% for i in students.paginator.page_range %}
+                        {% if students.number == i %}
+                            <li class="page-item active"><span class="page-link" style="background-color: #1e3a8a; border-color: #1e3a8a;">{{ i }}</span></li>
+                        {% else %}
+                            <li class="page-item"><a class="page-link" href="?page={{ i }}{% if request.GET.keywords %}&keywords={{ request.GET.keywords }}{% endif %}">{{ i }}</a></li>
+                        {% endif %}
+                    {% endfor %}
 
-                {% if students.has_next %}
-                    <li class="page-item"><a class="page-link" href="?page={{ students.next_page_number }}{% if request.GET.keywords %}&keywords={{ request.GET.keywords }}{% endif %}">Next &raquo;</a></li>
-                {% else %}
-                    <li class="page-item disabled"><span class="page-link">Next &raquo;</span></li>
-                {% endif %}
-            </ul>
-        </nav>
+                    {% if students.has_next %}
+                        <li class="page-item"><a class="page-link" href="?page={{ students.next_page_number }}{% if request.GET.keywords %}&keywords={{ request.GET.keywords }}{% endif %}">Next</a></li>
+                    {% else %}
+                        <li class="page-item disabled"><span class="page-link">Next</span></li>
+                    {% endif %}
+                </ul>
+            </nav>
         {% endif %}
+
     </div>
 </div>
 {% endblock %}

@@ -1,0 +1,143 @@
+{% extends 'base.html' %}
+
+{% block title %}Faculty Management{% endblock %}
+
+{% block content %}
+<div class="container-fluid px-0">
+    
+    <!-- 頂部標題區 -->
+    <div class="mb-4 pb-3 border-bottom d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3">
+        <div>
+            <h2 class="fw-bold text-dark mb-1">Faculty & Teacher Directory</h2>
+            <p class="text-muted mb-0">Review specialties, profiles, and verified academic staff members.</p>
+        </div>
+        
+        <!-- 大數據 Q() 複合式模糊搜尋框 -->
+        <form method="GET" action="{% url 'office:admin_teachers' %}" class="d-flex gap-2" style="max-width: 400px;">
+            <div class="input-group">
+                <input type="text" name="keywords" class="form-control border-secondary-subtle" placeholder="Search name or email..." value="{{ request.GET.keywords }}">
+                <button type="submit" class="btn btn-primary" style="background-color: #1e3a8a; border-color: #1e3a8a;">
+                    <i class="fas fa-search"></i> Search
+                </button>
+            </div>
+            {% if request.GET.keywords %}
+                <a href="{% url 'office:admin_teachers' %}" class="btn btn-outline-secondary">Clear</a>
+            {% endif %}
+        </form>
+    </div>
+
+    <!-- Django 訊息通知彈窗 -->
+    {% if messages %}
+        {% for message in messages %}
+            <div class="alert alert-{% if message.tags == 'error' %}danger{% else %}success{% endif %} alert-dismissible fade show shadow-sm mb-4" role="alert">
+                <i class="fas {% if message.tags == 'error' %}fa-exclamation-circle{% else %}fa-check-circle{% endif %} me-2"></i>{{ message }}
+                <button type="button" class="close" data-dismiss="alert" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+        {% endfor %}
+    {% endif %}
+
+    <!-- 數據表格卡片 -->
+    <div class="card card-custom bg-white border-0 shadow-sm p-4">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+                <thead class="table-light text-secondary">
+                    <tr>
+                        <th>Name</th>                                             
+                        <th>Email Address</th>
+                        <th>Gender</th>
+                        <th>Specialty / Expertise</th>
+                        <!-- 行政與訪客標題隔離 -->
+                        <th class="text-center" style="width: 250px;">
+                            {% if is_admin_mode %}Verification Status & Actions{% else %}Verification Status{% endif %}
+                        </th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% if teachers %}
+                        {% for teacher in teachers %}
+                        <tr>
+                            <!-- 姓名顯示 -->
+                            <td class="fw-bold text-dark">{{ teacher.first_name }} {{ teacher.last_name }}</td>
+                            
+                            <!-- Email 與動態織網小標籤 -->
+                            <td>
+                                <div class="fw-bold text-secondary" style="font-size: 0.95rem;">{{ teacher.email }}</div>
+                                <div class="mt-2 d-flex flex-wrap gap-2">
+                                    <span class="badge rounded-pill text-dark px-2 py-1" style="background-color: #e0f2fe; font-size: 0.75rem; font-weight: 500; border: 1px solid #bae6fd;">
+                                        📘 Courses: {{ teacher.total_courses|default:0 }} 
+                                    </span>
+                                    <span class="badge rounded-pill text-dark px-2 py-1" style="background-color: #f1f5f9; font-size: 0.75rem; font-weight: 500; border: 1px solid #e2e8f0;">
+                                        👥 Students: {{ teacher.total_students|default:0 }} 
+                                    </span>
+                                    <span class="badge rounded-pill text-dark px-2 py-1" style="background-color: #dcfce7; font-size: 0.75rem; font-weight: 500; border: 1px solid #bbf7d0;">
+                                        📈 Avg Score: {{ teacher.avg_score|default:"0.0"|floatformat:1 }} 
+                                    </span>
+                                    <span class="badge rounded-pill text-dark px-2 py-1" style="background-color: #fef9c3; font-size: 0.75rem; font-weight: 500; border: 1px solid #fef08a;">
+                                        ⏱️ Attd Rate: {{ teacher.avg_attendance|default:"100.0"|floatformat:1 }}%
+                                    </span>
+                                </div>
+                            </td>
+
+                            <!-- 性別欄位（精確修正對齊） -->
+                            <td>
+                                {% if teacher.gender == 'M' %}
+                                    <span class="badge bg-light text-primary border">Male</span>
+                                {% elif teacher.gender == 'F' %}
+                                    <span class="badge bg-light text-danger border">Female</span>
+                                {% else %}
+                                    <span class="badge bg-light text-secondary border">Unknown</span>
+                                {% endif %}
+                            </td> 
+
+                            <!-- 經驗介紹 / 專長 -->
+                            <td>
+                                <span class="text-secondary small">{{ teacher.specialty|default:"No specialty described." }}</span>
+                            </td>
+
+                            <!-- 審核狀態與按鈕 -->
+                            <td class="text-center">
+                                {% if teacher.is_active %}
+                                    <span class="badge bg-success bg-opacity-10 text-success px-3 py-2 fw-bold"><i class="fas fa-check-circle me-1"></i>Active</span>
+                                {% else %}
+                                    {% if is_admin_mode %}
+                                        <div class="mb-2">
+                                            <span class="badge bg-warning bg-opacity-15 text-warning px-2 py-1 fw-bold"><i class="fas fa-hourglass-half me-1"></i>Pending Review</span>
+                                        </div>
+                                        <div class="d-flex justify-content-center gap-2">
+                                            <!-- Approve 核准表單 -->
+                                            <form action="{% url 'office:admin_teachers' %}" method="POST" style="display:inline;">
+                                                {% csrf_token %}
+                                                <input type="hidden" name="approve_teacher_id" value="{{ teacher.id }}">
+                                                <button type="submit" class="btn btn-sm btn-success px-2 fw-semibold">
+                                                    <i class="fas fa-user-check me-1"></i>Approve
+                                                </button>
+                                            </form>
+                                            <!-- Reject 拒絕表單 -->
+                                            <form action="{% url 'office:admin_teachers' %}" method="POST" style="display:inline;" onsubmit="return confirm('Reject and delete this registration permanently?');">
+                                                {% csrf_token %}
+                                                <input type="hidden" name="reject_teacher_id" value="{{ teacher.id }}">
+                                                <button type="submit" class="btn btn-sm btn-outline-danger px-2 fw-semibold">
+                                                    <i class="fas fa-user-times me-1"></i>Reject
+                                                </button>
+                                            </form>
+                                        </div>
+                                    {% else %}
+                                        <span class="badge bg-secondary text-white px-3 py-2 fw-bold">Verified Only</span>
+                                    {% endif %}
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    {% else %}
+                        <tr>
+                            <td colspan="5" class="text-center text-muted py-4">No teacher data available.</td>
+                        </tr>
+                    {% endif %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}

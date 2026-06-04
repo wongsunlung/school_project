@@ -44,6 +44,12 @@
                             <input type="email" class="form-control" id="email" name="email" placeholder="name@school.edu" required>
                         </div>
 
+                        <!-- 🌟 核心防禦新增：登入密碼欄位（純英文對齊，name="password"） -->
+                        <div class="mb-3">
+                            <label for="password" class="form-label fw-semibold text-secondary">Password</label>
+                            <input type="password" class="form-control" id="password" name="password" placeholder="Set your login password" required>
+                        </div>
+
                         <!-- 🌟 核心設計：老師專屬自訂欄位區塊（預設隱藏，選老師時動態顯示） -->
                         <div id="teacherFields" style="display: none;" class="p-3 bg-light rounded-3 mb-3 border">
                             <h6 class="fw-bold text-dark mb-3"><i class="fas fa-id-card text-primary me-2"></i>Faculty Specific Details</h6>

@@ -1,0 +1,223 @@
+from django.db import models
+
+# ==========================================================
+# 🧱 基礎實體：班級與教師模型（保持你原本的底層結構）
+# ==========================================================
+class SchoolClass(models.Model):
+    name = models.CharField(max_length=50)
+    grade_level = models.IntegerField(default=1)
+    academic_year = models.CharField(max_length=10, default="2026")
+    
+    # 修正：將純文字改為外鍵關聯，連結到你的 Teacher 模型
+    homeroom_teacher = models.ForeignKey(
+        'Teacher',               # 如果你的老師 Model 叫 Teacher
+        on_delete=models.SET_NULL, # 老師資料如果被刪除，班級的導師欄位會變 null，班級不會被刪除
+        null=True,               # 允許資料庫中此欄位為空
+        blank=True,              # 允許 Django 後台表單免填
+        related_name='school_classes' # 方便以後從老師反向查詢班級 (例如 teacher.school_classes.all())
+    )
+
+    class Meta:
+        db_table = 'school_classes'
+
+    def __str__(self):
+        return self.name
+
+
+
+
+# class SchoolClass(models.Model):
+#     name = models.CharField(max_length=50)
+    
+#     # 新增的三個英文欄位
+#     grade_level = models.IntegerField(default=1)
+#     academic_year = models.CharField(max_length=10, default="2026")  # 配合當前 2026 年份設定預設值
+#     homeroom_teacher = models.CharField(max_length=100, blank=True, null=True)
+
+#     class Meta:
+#         db_table = 'school_classes'
+
+#     def __str__(self):
+#         return self.name
+
+
+
+class Teacher(models.Model):
+    first_name = models.CharField(max_length=50)
+    last_name = models.CharField(max_length=50)
+    email = models.EmailField(unique=True)
+    password = models.CharField(max_length=128)  # 🔒 密碼欄位，絕對在場
+    gender = models.CharField(max_length=1, default='U')
+    specialty = models.TextField(blank=True, null=True)
+    is_active = models.BooleanField(default=False)
+
+    # 🔗 鋼鐵鎖定，絕對對齊舊資料庫表名 school_teachers
+    class Meta:
+        db_table = 'school_teachers'
+
+    def __str__(self):
+        return f"{self.first_name} {self.last_name}"
+
+
+
+# ==========================================================
+# 🌟 行政管理人員模型（100% 串接你原本的嚴謹架構）
+# ==========================================================
+
+class Staff(models.Model):
+    """行政管理人員模型"""
+    class TitleChoices(models.TextChoices):
+        PRINCIPAL = 'PR', 'Principal'
+        DIRECTOR = 'DI', 'Director'
+        COORDINATOR = 'CO', 'Coordinator'
+        OFFICER = 'OF', 'Administrative Officer'
+        CLERK = 'CL', 'Clerk'
+
+    first_name: str = models.CharField(max_length=50)
+    last_name: str = models.CharField(max_length=50)
+    email: str = models.EmailField(unique=True)
+    title: str = models.CharField(
+        max_length=2,
+        choices=TitleChoices.choices,
+        default=TitleChoices.OFFICER
+    )
+    department: str = models.CharField(max_length=100)
+    hire_date = models.DateField(auto_now_add=True)
+
+    class Meta:
+        db_table = 'school_staff'
+        verbose_name = 'Staff Member'
+        verbose_name_plural = 'Staff Members'
+
+    def __str__(self) -> str:
+        return f"Staff: {self.first_name} {self.last_name} ({self.get_title_display()})"
+
+# ==========================================================
+# 🛡️ 終極防禦：建立 Score 假模型，一秒打碎 ImportError 卡死災難！
+# ==========================================================
+
+class Score(models.Model):
+    """Score Model Dummy - 100% Pure Defense No Columns"""
+
+    class Meta:
+        db_table = 'school_scores'
+        verbose_name = 'Student Score'
+        verbose_name_plural = 'Student Scores'
+        # 🟢 核心防禦：告訴 Django 這個模型不需要管理，防止它瞎猜欄位
+        managed = False 
+
+    def __str__(self) -> str:
+        return f"Score Record ID: {self.id}"
+
+
+# ==========================================================
+# 🎓 核心實體：學生模型（升級為正統 Many-to-Many 多對多選課）
+# ==========================================================
+
+class Student(models.Model):
+    """Student Profile Model"""
+    student_id = models.CharField(max_length=20, unique=True, help_text="Unique School Student ID")
+    first_name = models.CharField(max_length=50)
+    last_name = models.CharField(max_length=50)
+    email = models.EmailField(unique=True)
+    password = models.CharField(max_length=128, blank=True, null=True, verbose_name="Login Password")
+
+    school_class = models.ForeignKey(SchoolClass, on_delete=models.SET_NULL, null=True, related_name='students')
+    enroll_date = models.DateField(auto_now_add=True)
+    is_active = models.BooleanField(default=True)
+
+    # 🌟 核心進化：一個學生可以修很多課，每門課的成績與出席全部隔離在 Enrollment 資料表
+    courses = models.ManyToManyField('Course', through='Enrollment', related_name='students')
+
+    class Meta:
+        db_table = 'school_students'
+
+    def __str__(self) -> str:
+        return f"{self.first_name} {self.last_name} ({self.student_id})"
+
+# ==========================================================
+# 📘 核心實體：課程模型（完美結合你原本的架構規格）
+# ==========================================================
+
+class Course(models.Model):
+    """Course Specifications Model"""
+    code = models.CharField(max_length=20, unique=True)
+    name = models.CharField(max_length=150)
+    description = models.TextField(blank=True, help_text="Detailed course description")
+    credits = models.PositiveIntegerField(default=3)
+    teacher = models.ForeignKey(Teacher, on_delete=models.SET_NULL, null=True, related_name='courses')
+
+    class Meta:
+        db_table = 'school_courses'
+        verbose_name = 'Course'
+        verbose_name_plural = 'Courses'
+
+    def __str__(self) -> str:
+        return f"Course: {self.name} ({self.code})"
+
+# ==========================================================
+# 🌟 終極核心：選課與成績關聯表（大數據織網中心）
+# ==========================================================
+from django.contrib import admin
+# from .models import Teacher, Staff, Course, SchoolClass, Student, Score, Enrollment
+
+# 🟢 將基礎模型老老實實註冊進管理後台
+admin.site.register(Teacher)
+admin.site.register(Staff)
+admin.site.register(Course)
+
+
+# 🟢 建立選課內嵌介面：讓學生可以直接在同一個頁面選修課程、打分數、記出勤
+# class EnrollmentInline(admin.TabularInline):
+#     model = Enrollment
+#     fields = ['course', 'score', 'attendance_rate']  # 隱藏 student 欄位，因為已經在該學生的頁面下了
+#     extra = 1  # 預設多顯示一個空白列供直接選課
+
+# 🟢 學生特製版：掛載內嵌選課表格
+# @admin.register(Student)
+# class StudentAdmin(admin.ModelAdmin):
+#     list_display = ['id', 'student_id', 'first_name', 'last_name', 'school_class', 'is_active']
+#     inlines = [EnrollmentInline]  # 🌟 核心關鍵：將選課與評分介面直接塞進學生編輯頁面！
+
+# 🟢 班級特製版：讓列表不再只秀圖示，而是直接印出 ID、班級名稱、年級、學年與導師姓名
+@admin.register(SchoolClass)
+class SchoolClassAdmin(admin.ModelAdmin):
+    list_display = ['id', 'name', 'grade_level', 'academic_year', 'homeroom_teacher']
+
+# 🟢 終極收網：不讓 Admin 去撈任何欄位，只准它印出最安全的自帶 ID
+@admin.register(Score)
+class ScoreAdmin(admin.ModelAdmin):
+    list_display = ['id']  # 🟢 只印出資料庫絕對存在的唯一識別碼，拒絕任何欄位撞牆！
+
+
+# class Enrollment(models.Model):
+#     """🌟 Student Course Enrollment & Grading Matrix 🌟"""
+#     student = models.ForeignKey(Student, on_delete=models.CASCADE, related_name='enrollments')
+#     course = models.ForeignKey(Course, on_delete=models.CASCADE, related_name='enrollments')
+    
+#     # 🌟 數據完美隔離！每個學生在「每一門課」都有自己獨立的分數與出勤！
+#     score = models.DecimalField(max_digits=5, decimal_places=2, null=True, blank=True)
+#     attendance_rate = models.DecimalField(max_digits=5, decimal_places=2, default=100.00)
+    
+#     class Meta:
+#         db_table = 'school_enrollments'
+#         unique_together = ('student', 'course')
+
+#     def __str__(self) -> str:
+#         return f"{self.student.first_name} -> {self.course.name} (Score: {self.score})"
+# 🟢 已經把 EnrollmentInline 拿掉，並將 Enrollment 完美恢復：
+class Enrollment(models.Model):
+    """🌟 Student Course Enrollment & Grading Matrix 🌟"""
+    student = models.ForeignKey('Student', on_delete=models.CASCADE, related_name='enrollments')
+    course = models.ForeignKey('Course', on_delete=models.CASCADE, related_name='enrollments')
+    score = models.DecimalField(max_digits=5, decimal_places=2, null=True, blank=True)
+    attendance_rate = models.DecimalField(max_digits=5, decimal_places=2, default=100.00)
+    
+    class Meta:
+        db_table = 'school_enrollments'
+        unique_together = ('student', 'course')
+
+    def __str__(self) -> str:
+        # return f"Enrollment ID: {self.id}"
+        return f"{self.student} - {self.course}"
+

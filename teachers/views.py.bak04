@@ -1,0 +1,212 @@
+import json
+from django.shortcuts import render
+from django.http import JsonResponse
+from django.views.decorators.csrf import csrf_exempt
+from django.core.paginator import Paginator  # 🌟 核心：引進 Django 正規分頁器
+from main_base.models import Student, Enrollment, Course  # 🟢 確保有 Enrollment
+from django.contrib.auth.decorators import login_required
+
+def teacher_index(request):
+    """教師端 Portal 首頁"""
+    return render(request, 'teachers/teacher.html')
+
+
+def attendance_list(request):
+    """教師端 - 出勤紀錄（每頁 5 筆 - 🟢 完美融合多對多地基）"""
+    student_list = Student.objects.all().order_by('id')
+    paginator = Paginator(student_list, 5)  # 🌟 精準鎖定：每頁 5 筆資料
+    page_number = request.GET.get('page')
+    page_obj = paginator.get_page(page_number)
+    
+    # 🟢 LUNG 終極防線：強行把中間表的出勤率/狀態掛載到前端舊屬性，防止停權悲劇
+    for student in page_obj.object_list:
+        try:
+            enrollment = Enrollment.objects.filter(student=student).first()
+            if enrollment and hasattr(enrollment, 'attendance_rate'):
+                student.attendance_rate = enrollment.attendance_rate
+            else:
+                student.attendance_rate = 100.0
+        except:
+            student.attendance_rate = 100.0
+            
+    return render(request, 'teachers/attendance.html', {'page_obj': page_obj})
+
+# -----------------------------------------------------
+# 1. 網頁渲染：只顯示「我的學生」與「我的課」
+# -----------------------------------------------------
+@login_required(login_url='users:login')
+def grades_list(request):
+    """教師端 - 成績輸入（🌟 權限隔離版：只看自己的學生、自己的課）"""
+    teacher_email = request.user.email
+    
+    # 🌟 修正 1：不要把全校學生列出來！只抓「有修我的課」的學生
+    # .distinct() 是為了防止學生修了我兩門課，在列表上出現兩次
+    student_list = Student.objects.filter(
+        enrollments__course__teacher__email=teacher_email
+    ).distinct().order_by('id')
+
+    # 💡 測試防呆機制：如果你用 admin 登入測試，且 admin 不是老師，抓不到資料的話：
+    if not student_list.exists():
+        fallback_course = Course.objects.exclude(teacher__isnull=True).first()
+        if fallback_course:
+            teacher_email = fallback_course.teacher.email  # 暫時借用第一個有教課的老師
+            student_list = Student.objects.filter(
+                enrollments__course__teacher__email=teacher_email
+            ).distinct().order_by('id')
+
+    paginator = Paginator(student_list, 5)  
+    page_number = request.GET.get('page')
+    page_obj = paginator.get_page(page_number)
+    
+    for student in page_obj.object_list:
+        # 🌟 修正 2：絕對隔離！把學生的課展開時，只抓「當前登入老師」教的課！
+        student.my_enrollments = Enrollment.objects.filter(
+            student=student,
+            course__teacher__email=teacher_email  # 👈 權限防護罩：不是我的課直接濾掉
+        ).select_related('course')
+            
+    return render(request, 'teachers/grades.html', {'page_obj': page_obj})
+
+
+# def grades_list(request):
+#     """教師端 - 成績輸入（每頁 5 筆 - 🟢 完美織網相容，拒絕歸零！）"""
+#     student_list = Student.objects.all().order_by('id')
+#     paginator = Paginator(student_list, 5)  # 🌟 精準鎖定：每頁 5 筆資料
+#     page_number = request.GET.get('page')
+#     page_obj = paginator.get_page(page_number)
+    
+#     # 🟢 LUNG 終極防線：強行在記憶體裡把中間表的分數塞給前端的舊 .score 欄位！
+#     for student in page_obj.object_list:
+#         try:
+#             # 自動抓這名學生所有選課中，分數不是 0 的那筆，或預設第一筆
+#             enrollment = Enrollment.objects.filter(student=student).exclude(score=0).first()
+#             if not enrollment:
+#                 enrollment = Enrollment.objects.filter(student=student).first()
+                
+#             if enrollment:
+#                 student.score = enrollment.score
+#             else:
+#                 student.score = 0  # 沒選課預設給 0，保證前端不報錯
+#         except:
+#             student.score = 0
+            
+#     return render(request, 'teachers/grades.html', {'page_obj': page_obj})
+
+
+# ==========================================================
+# 💾 實時儲存 API 補給線：接收前端傳來的真實 ID，100% 寫入主地基
+# ==========================================================
+
+@csrf_exempt
+def api_update_attendance(request):
+    """🟢 點名 API 安全升級：精準寫入中間表，絕不誤封鎖學生帳號！"""
+    if request.method == 'POST':
+        try:
+            data = json.loads(request.body)
+            student_id = data.get('id')      
+            is_present = data.get('status')  # True (出席) 或 False (缺席)
+            
+            student = Student.objects.get(id=student_id)
+            
+            # 🟢 修正：點名狀態改為紀錄在選課中間表 Enrollment
+            enrollment = Enrollment.objects.filter(student=student).first()
+            if enrollment:
+                if hasattr(enrollment, 'attendance_rate'):
+                    enrollment.attendance_rate = 100.0 if is_present else 0.0
+                enrollment.save()
+                print(f"--- [DB ATTENDANCE FIX SAVE] Student: {student.first_name} Attendance updated to {is_present} ---")
+                return JsonResponse({'status': 'success'})
+                
+            return JsonResponse({'status': 'error', 'message': 'No enrollment found.'}, status=404)
+        except Exception as e:
+            return JsonResponse({'status': 'error', 'message': str(e)}, status=400)
+    return JsonResponse({'status': 'invalid_method'}, status=405)
+
+# -----------------------------------------------------
+# 2. 存檔 API：防止駭客/網頁錯誤去修改別人的成績
+# -----------------------------------------------------
+@csrf_exempt
+def api_update_score(request):
+    """🟢 評分 API：真金白銀精準寫入 (加上老師權限驗證)"""
+    if request.method == 'POST':
+        try:
+            data = json.loads(request.body)
+            student_id = data.get('id')      
+            score_value = data.get('score')  
+            course_id = data.get('course_id')  
+            
+            if not student_id or score_value is None or not course_id:
+                return JsonResponse({'status': 'error', 'message': 'Missing Data.'}, status=400)
+                
+            student = Student.objects.get(id=student_id)
+            
+            # 🌟 修正 3：API 防護罩。確保要改的這門課，真的是「現在登入的這個老師」教的
+            teacher_email = request.user.email
+            
+            # 測試防呆：如果網頁沒有 request.user.email，預設放行 (正式上線請拿掉此if)
+            if not teacher_email: 
+                enrollment = Enrollment.objects.filter(student=student, course_id=course_id).first()
+            else:
+                enrollment = Enrollment.objects.filter(
+                    student=student, 
+                    course_id=course_id,
+                    course__teacher__email=teacher_email # 👈 鎖定老師
+                ).first()
+            
+            if enrollment:
+                enrollment.score = int(score_value)
+                enrollment.save()
+                print(f"--- [DB FIX SAVE] Student: {student.first_name}, Course: {enrollment.course.name} -> {score_value} pts ---")
+                return JsonResponse({'status': 'success'})
+            else:
+                return JsonResponse({'status': 'error', 'message': 'Enrollment not found or Permission Denied!'}, status=403)
+                
+        except Exception as e:
+            return JsonResponse({'status': 'error', 'message': str(e)}, status=400)
+            
+    return JsonResponse({'status': 'invalid_method'}, status=405)
+# @csrf_exempt
+# def api_update_score(request):
+#     """🟢 評分 API：真金白銀精準寫入多對多中間表 (100% 鎖死分數)"""
+#     if request.method == 'POST':
+#         try:
+#             data = json.loads(request.body)
+#             student_id = data.get('id')      
+#             score_value = data.get('score')  
+#             course_id = data.get('course_id')  
+            
+#             if not student_id or score_value is None:
+#                 return JsonResponse({'status': 'error', 'message': 'Missing Student ID or Score.'}, status=400)
+                
+#             student = Student.objects.get(id=student_id)
+#             enrollment = None
+            
+#             # 情況 A：如果前端有傳入 course_id，精準鎖定
+#             if course_id:
+#                 enrollment = Enrollment.objects.filter(student=student, course_id=course_id).first()
+            
+#             # 情況 B：前端沒傳 course_id（舊前端），後台自動幫忙媒合第一筆選課紀錄
+#             if not enrollment:
+#                 enrollment = Enrollment.objects.filter(student=student).first()
+            
+#             # 3. 🟢 真金白銀寫入多對多中間表
+#             if enrollment:
+#                 enrollment.score = int(score_value)
+#                 enrollment.save()
+#                 print(f"--- [DB FIX SAVE SUCCESS] Student: {student.first_name}, Course: {enrollment.course.name} -> {score_value} pts ---")
+#                 return JsonResponse({'status': 'success'})
+#             else:
+#                 # 情況 C：終極防禦防線。如果這學生在資料庫真的沒選課，現場創建實體連線
+#                 any_course = Course.objects.first()
+#                 if any_course:
+#                     enrollment = Enrollment.objects.create(student=student, course=any_course, score=int(score_value))
+#                     print(f"--- [DB AUTO-LINK SAVE] Created new enrollment -> {score_value} pts ---")
+#                     return JsonResponse({'status': 'success'})
+                
+#                 return JsonResponse({'status': 'error', 'message': 'No course exists in database.'}, status=404)
+                
+#         except Exception as e:
+#             print(f"--- [DB SAVE ERROR] {str(e)} ---")
+#             return JsonResponse({'status': 'error', 'message': str(e)}, status=400)
+            
+#     return JsonResponse({'status': 'invalid_method'}, status=405)

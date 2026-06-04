@@ -1,0 +1,32 @@
+# from django.contrib import admin
+# from .models import Teacher, Staff, Course, SchoolClass, Student, Score
+
+# # 🟢 將 5 大核心模型老老實實註冊進管理後台
+# admin.site.register(Teacher)
+# admin.site.register(Staff)
+# admin.site.register(Course)
+# admin.site.register(SchoolClass)
+# admin.site.register(Student)
+
+# # 🟢 終極收網：不讓 Admin 去撈任何欄位，只准它印出最安全的自帶 ID
+# @admin.register(Score)
+# class ScoreAdmin(admin.ModelAdmin):
+#     list_display = ['id']  # 🟢 只印出資料庫絕對存在的唯一識別碼，拒絕任何欄位撞牆！
+from django.contrib import admin
+from .models import Teacher, Staff, Course, SchoolClass, Student, Score
+
+# 🟢 將基礎模型老老實實註冊進管理後台
+admin.site.register(Teacher)
+admin.site.register(Staff)
+admin.site.register(Course)
+admin.site.register(Student)
+
+# 🟢 班級特製版：讓列表不再只秀圖示，而是直接印出 ID、班級名稱、年級、學年與導師姓名
+@admin.register(SchoolClass)
+class SchoolClassAdmin(admin.ModelAdmin):
+    list_display = ['id', 'name', 'grade_level', 'academic_year', 'homeroom_teacher']
+
+# 🟢 終極收網：不讓 Admin 去撈任何欄位，只准它印出最安全的自帶 ID
+@admin.register(Score)
+class ScoreAdmin(admin.ModelAdmin):
+    list_display = ['id']  # 🟢 只印出資料庫絕對存在的唯一識別碼，拒絕任何欄位撞牆！

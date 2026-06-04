@@ -1,29 +1,93 @@
 {% extends 'base.html' %}
 
-{% block title %}Grades Report - Student{% endblock %}
-
 {% block content %}
-<div class="container-fluid px-0">
-    <div class="d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center mb-4 pb-3 border-bottom">
-        <div>
-            <h2 class="fw-bold text-dark mb-1">Academic Report Card</h2>
-            <p class="text-muted mb-0">Monitor your final grades, midterms performance, and registered course achievements.</p>
-        </div>
-        <div class="mt-3 mt-md-0 d-flex gap-2">
-            <div class="dropdown">
-                <button class="btn btn-white border shadow-sm dropdown-toggle fw-semibold" type="button" id="studentMenu3" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
-                    <i class="fas fa-graduation-cap text-primary me-1"></i> Student Tools
-                </button>
-                <div class="dropdown-menu dropdown-menu-right shadow border-0" aria-labelledby="studentMenu3">
-                    <a class="dropdown-item py-2" href="{% url 'students:timetable' %}"><i class="fas fa-clock me-2 text-info"></i>View Timetable</a>
-                    <a class="dropdown-item py-2" href="{% url 'students:grades_report' %}"><i class="fas fa-poll-h me-2 text-success"></i>Grades Report</a>
-                    <a class="dropdown-item py-2" href="{% url 'students:enroll' %}"><i class="fas fa-check-double me-2 text-warning"></i>Course Enrollment</a>
-                </div>
+<div class="container mt-5">
+    <div class="mb-3 d-flex justify-content-between align-items-center">
+        <a href="{% url 'students:index' %}" class="btn btn-outline-secondary">
+            <i class="fas fa-arrow-left me-1"></i> Back to Dashboard
+        </a>
+    </div>
+
+    <div class="row g-3 mb-4">
+        <div class="col-6 col-md-3">
+            <div class="p-3 bg-white rounded shadow-sm border-start border-primary border-4">
+                <small class="text-muted d-block text-uppercase fw-bold small mb-1">Total Average</small>
+                <span class="fs-4 fw-bold text-dark">{{ avg_score|floatformat:2 }} pts</span>
             </div>
-            <a href="{% url 'students:index' %}" class="btn btn-primary shadow-sm" style="background-color: #1e3a8a; border: none;">Back to Hub</a>
+        </div>
+        <div class="col-6 col-md-3">
+            <div class="p-3 bg-white rounded shadow-sm border-start border-info border-4">
+                <small class="text-muted d-block text-uppercase fw-bold small mb-1">Attendance Rate</small>
+                <span class="fs-4 fw-bold text-dark">{{ avg_attendance|floatformat:2 }} %</span>
+            </div>
         </div>
     </div>
 
-    <div class="card card-custom bg-white border-0 shadow-sm p-4"><p class="text-muted mb-0">Your final exam grades and GPA breakdown metrics are ready for ORM database binding.</p></div>
+    <div class="card shadow border-0">
+        <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center py-3">
+            <h3 class="mb-0 h5 fw-bold"><i class="fas fa-poll-h me-2"></i>Academic Grades Report</h3>
+            <span class="badge bg-light text-primary fs-6 fw-semibold">
+                {{ student.first_name }} {{ student.last_name }} ({{ student.student_id }})
+            </span>
+        </div>
+        <div class="card-body">
+            <div class="mb-4">
+                <h5><strong>Class Room:</strong> <span class="text-secondary">{{ student.school_class.name|default:"Unassigned" }}</span></h5>
+            </div>
+
+            <div class="table-responsive">
+                <table class="table table-hover table-striped align-middle">
+                    <thead class="table-dark">
+                        <tr>
+                            <th scope="col">Course Code</th>
+                            <th scope="col">Course Name</th>
+                            <th scope="col">Credits</th>
+                            <th scope="col" class="text-center">Final Grade</th>
+                            <th scope="col" class="text-center">Status</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for enrollment in enrollments %}
+                        <tr>
+                            <td><strong>{{ enrollment.course.code }}</strong></td>
+                            <td>{{ enrollment.course.name }}</td>
+                            <td>{{ enrollment.course.credits }}</td>
+                            
+                            <td class="text-center fs-5 fw-bold">
+                                {% if enrollment.score is not None %}
+                                    {% if enrollment.score >= 60 %}
+                                        <span class="text-success">{{ enrollment.score }} pts</span>
+                                    {% else %}
+                                        <span class="text-danger">{{ enrollment.score }} pts</span>
+                                    {% endif %}
+                                {% else %}
+                                    <span class="text-muted fs-6 fw-normal small">Not Graded</span>
+                                {% endif %}
+                            </td>
+                            
+                            <td class="text-center">
+                                {% if enrollment.score is not None %}
+                                    {% if enrollment.score >= 60 %}
+                                        <span class="badge bg-success">Passed</span>
+                                    {% else %}
+                                        <span class="badge bg-danger">Failed</span>
+                                    {% endif %}
+                                {% else %}
+                                    <span class="badge bg-secondary text-white">Pending</span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="5" class="text-center text-muted py-5">
+                                Available elective curriculums and elective options pending registration entry.
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
 </div>
 {% endblock %}
