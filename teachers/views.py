@@ -24,9 +24,45 @@ def _get_current_teacher_or_fallback(request):
 # ==========================================================
 @login_required(login_url='users:login')
 def teacher_index(request):
-    """教師端 Portal 首頁 (🔒 必須登入)"""
+    """教師端 Portal 首頁 (🔒 必須登入 - 📊 動態儀表板數據核心)"""
     teacher = _get_current_teacher_or_fallback(request)
-    return render(request, 'teachers/teacher.html', {'teacher': teacher})
+    
+    # 1. 🎯 算出該教師名下的所有課程數量
+    my_courses = teacher.courses.all() if hasattr(teacher, 'courses') else []
+    total_courses = my_courses.count() if hasattr(my_courses, 'count') else len(my_courses)
+    
+    # 2. 🗄️ 撈出這些課程在中間表（Enrollment）的所有選課紀錄
+    # 這裡直接沿用您在考勤表通過驗證的 Enrollment 模型
+    enrollments = Enrollment.objects.filter(course__in=my_courses) if my_courses else []
+    
+    # 3. 📈 動態計算平均出勤率 (與行政端織網演算法精準對齊，保留一位小數)
+    if enrollments:
+        valid_attendance = [e.attendance_rate for e in enrollments if hasattr(e, 'attendance_rate') and e.attendance_rate is not None]
+        avg_attendance = round(sum(valid_attendance) / len(valid_attendance), 1) if valid_attendance else 100.0
+    else:
+        avg_attendance = 100.0
+        
+    # 4. 📝 動態計算「待評分」數量 (即 score 欄位還是 None 的學生選課紀錄)
+    if enrollments:
+        pending_count = enrollments.filter(score__isnull=True).count()
+    else:
+        pending_count = 0
+        
+    # 5. 📦 打包真金白銀的數據送往前端
+    context = {
+        'teacher': teacher,
+        'total_courses': total_courses,
+        'avg_attendance': avg_attendance,
+        'pending_count': pending_count
+    }
+    
+    # 🚨 備註：此處維持您原本指定的 'teachers/teacher.html' 樣板路徑
+    return render(request, 'teachers/teacher.html', context)
+# @login_required(login_url='users:login')
+# def teacher_index(request):
+#     """教師端 Portal 首頁 (🔒 必須登入)"""
+#     teacher = _get_current_teacher_or_fallback(request)
+#     return render(request, 'teachers/teacher.html', {'teacher': teacher})
 
 
 # ==========================================================
@@ -37,7 +73,13 @@ def attendance_list(request):
     """教師端 - 出勤紀錄（每頁 5 筆 - 🟢 完美融合多對多地基）"""
     teacher = _get_current_teacher_or_fallback(request)
     
-    student_list = Student.objects.all().order_by('id')
+    # 🚨 核心防線修補：先找出當前登入老師名下的所有課程
+    my_courses = teacher.courses.all() if hasattr(teacher, 'courses') else []
+    
+    # 🎯 精準過濾：只撈出「有報讀這些課程」的學生名單，並去重（.distinct()）防止重複
+    student_list = Student.objects.filter(courses__in=my_courses).distinct().order_by('id')
+    
+    # 全站統一 5 人分頁器
     paginator = Paginator(student_list, 5)  
     page_number = request.GET.get('page')
     page_obj = paginator.get_page(page_number)
@@ -45,7 +87,8 @@ def attendance_list(request):
     # 🟢 終極防線：強行把中間表的出勤率掛載到前端屬性，防止錯誤
     for student in page_obj.object_list:
         try:
-            enrollment = Enrollment.objects.filter(student=student).first()
+            # 🎯 精準修正：撈中間表時，必須限定是該學生「報讀這位老師名下課程」的紀錄，絕不張冠李戴
+            enrollment = Enrollment.objects.filter(student=student, course__in=my_courses).first()
             if enrollment and hasattr(enrollment, 'attendance_rate'):
                 student.attendance_rate = enrollment.attendance_rate
             else:

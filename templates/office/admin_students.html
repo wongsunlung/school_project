@@ -118,9 +118,9 @@
             <nav aria-label="Page navigation" class="mt-4">
                 <ul class="pagination justify-content-center mb-0">
                     {% if students.has_previous %}
-                        <li class="page-item"><a class="page-link" href="?page={{ students.previous_page_number }}{% if request.GET.keywords %}&keywords={{ request.GET.keywords }}{% endif %}">Previous</a></li>
+                        <li class="page-item"><a class="page-link" href="?page={{ students.previous_page_number }}{% if request.GET.keywords %}&keywords={{ request.GET.keywords }}{% endif %}">&laquo;</a></li>
                     {% else %}
-                        <li class="page-item disabled"><span class="page-link">Previous</span></li>
+                        <li class="page-item disabled"><span class="page-link">&laquo;</span></li>
                     {% endif %}
                     
                     {% for i in students.paginator.page_range %}
@@ -132,9 +132,9 @@
                     {% endfor %}
 
                     {% if students.has_next %}
-                        <li class="page-item"><a class="page-link" href="?page={{ students.next_page_number }}{% if request.GET.keywords %}&keywords={{ request.GET.keywords }}{% endif %}">Next</a></li>
+                        <li class="page-item"><a class="page-link" href="?page={{ students.next_page_number }}{% if request.GET.keywords %}&keywords={{ request.GET.keywords }}{% endif %}">&raquo;</a></li>
                     {% else %}
-                        <li class="page-item disabled"><span class="page-link">Next</span></li>
+                        <li class="page-item disabled"><span class="page-link">&raquo;</span></li>
                     {% endif %}
                 </ul>
             </nav>
