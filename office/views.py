@@ -32,24 +32,29 @@ def admin_teachers(request):
     if is_admin_mode and request.method == "POST" and "approve_teacher_id" in request.POST:
         t_id = request.POST.get("approve_teacher_id")
         teacher = get_object_or_404(core_models.Teacher, pk=t_id)
-        # 🟢 修正：如果 Teacher 沒有 is_active 欄位，此處不執行 teacher.is_active = True
-        teacher.save()
-        messages.success(request, f"Faculty Approved! Prof. {teacher.first_name} is now active.")
+        
+        # 🚨 核心漏洞修補：真金白銀把狀態改成 True，接通斷掉的線路！
+        teacher.is_active = True  
+        teacher.save()  # 💾 真正向 PostgreSQL 發送 UPDATE 存檔指令
+        
+        # 🌐 對外展示文字：完全使用英文
+        messages.success(request, f"Faculty Approved! Prof. {teacher.first_name} {teacher.last_name} is now active.")
         return redirect("office:admin_teachers")
 
-    # 🟥 POST 審核處理：Reject 拒絕
+    # 🟥 POST 審核處理：Reject 拒絕 (原汁原味保留物理刪除邏輯)
     if is_admin_mode and request.method == "POST" and "reject_teacher_id" in request.POST:
         t_id = request.POST.get("reject_teacher_id")
         teacher = get_object_or_404(core_models.Teacher, pk=t_id)
-        teacher.delete()
-        messages.success(request, "Registration request rejected and removed.")
+        teacher.delete()  # 💥 物理蒸發，查無此人
+        
+        # 🌐 對外展示文字：完全使用英文
+        messages.success(request, "Registration request rejected and removed permanently.")
         return redirect("office:admin_teachers")
 
-    # 2. 身份分流撈取基礎資料庫名單
-    # 🟢 修正：因為 Teacher 沒有 is_active 欄位，不論是否為管理員，均直接撈取全部
+    # 2. 身份分流撈取基礎資料庫名單 (完全維持您原本的設定)
     raw_teachers = core_models.Teacher.objects.all().order_by('-id')
 
-    # 3. 🌟 複合式 Q() 模糊搜尋過濾器 🌟
+    # 3. 🌟 複合式 Q() 模糊搜尋過濾器 🌟 (完全維持您原本的設定)
     if 'keywords' in request.GET:
         keywords = request.GET['keywords']
         if keywords:
@@ -59,44 +64,26 @@ def admin_teachers(request):
                 Q(email__icontains=keywords)
             )
 
-    # 4. 🌟 LUNG 終極直覺織網法：用 for 迴圈手動算出每位老師的真實數據（完美繞過 ORM 報錯地雷）
-        # 4. 🌟 LUNG 終極直覺織網法：用 for 迴圈手動算出每位老師的真實數據（🟢 完美對齊多對多中間表地基）
+    # 4. 🌟 LUNG 終極直覺織網法：動態算出每位老師的真實數據 (原汁原味，絕不破壞地基)
     for t in raw_teachers:
         # A. 找出這位老師教的所有課程
         my_courses = t.courses.all() if hasattr(t, 'courses') else []
         t.total_courses = len(my_courses)
         
-        # B. 順藤摸瓜，找出所有選了這些課程的學生（加上 .distinct() 防止重複計算）
+        # B. 找出所有選了這些課程的學生
         students_enrolled = core_models.Student.objects.filter(courses__in=my_courses).distinct()
         t.total_students = students_enrolled.count()
         
-        # 🟢 核心修正：從 Enrollment 中間表撈出這些學生在這幾門課的真實分數與出席率
+        # C. 從 Enrollment 中間表撈出真實數據
         enrollments = core_models.Enrollment.objects.filter(student__in=students_enrolled, course__in=my_courses)
         
-        # C. 真金白銀動態計算學生的【平均分】
+        # 動態計算學生的【平均分】
         valid_scores = [e.score for e in enrollments if e.score is not None]
         t.avg_score = sum(valid_scores) / len(valid_scores) if valid_scores else 0.0
         
-        # D. 真金白銀動態計算學生的【平均出席率】
+        # 動態計算學生的【平均出席率】
         valid_attendance = [e.attendance_rate for e in enrollments if hasattr(e, 'attendance_rate') and e.attendance_rate is not None]
         t.avg_attendance = sum(valid_attendance) / len(valid_attendance) if valid_attendance else 100.0
-
-    # for t in raw_teachers:
-    #     # A. 找出這位老師教的所有課程
-    #     my_courses = t.courses.all() if hasattr(t, 'courses') else []
-    #     t.total_courses = len(my_courses)
-        
-    #     # B. 順藤摸瓜，找出所有選了這些課程的學生
-    #     students_enrolled = core_models.Student.objects.filter(courses__in=my_courses)
-    #     t.total_students = students_enrolled.count()
-        
-    #     # C. 真金白銀動態計算學生的【平均分】
-    #     valid_scores = [s.score for s in students_enrolled if s.score is not None]
-    #     t.avg_score = sum(valid_scores) / len(valid_scores) if valid_scores else 0.0
-        
-    #     # D. 真金白銀動態計算學生的【平均出席率】
-    #     valid_attendance = [s.attendance_rate for s in students_enrolled if s.attendance_rate is not None]
-    #     t.avg_attendance = sum(valid_attendance) / len(valid_attendance) if valid_attendance else 100.0
 
     # 5. 全站統一 Paginator 分頁器（每頁嚴格限制 5 筆）
     paginator = Paginator(raw_teachers, 5) 
