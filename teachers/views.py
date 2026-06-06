@@ -6,7 +6,8 @@ from django.core.paginator import Paginator
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 # 🟢 引入 Teacher 模型，確保多對多與個人資料地基完整
-from main_base.models import Student, Enrollment, Course, Teacher  
+from main_base.models import Student, Enrollment, Course, Teacher
+import datetime  # 🌟 請確保在 views.py 頂部引入了這個標準庫  
 
 # ==========================================================
 # 🛠️ 內部防呆機制：確保登入者一定是老師，否則自動抓第一筆進行測試
@@ -22,47 +23,78 @@ def _get_current_teacher_or_fallback(request):
 # ==========================================================
 # 👨‍🏫 1. 教師端 Portal 首頁 Dashboard
 # ==========================================================
+import datetime
+
 @login_required(login_url='users:login')
 def teacher_index(request):
-    """教師端 Portal 首頁 (🔒 必須登入 - 📊 動態儀表板數據核心)"""
+    """Teacher Portal Home (🔒 Authentication Required - 📊 Dashboard Core)"""
     teacher = _get_current_teacher_or_fallback(request)
     
-    # 1. 🎯 算出該教師名下的所有課程數量
-    my_courses = teacher.courses.all() if hasattr(teacher, 'courses') else []
-    total_courses = my_courses.count() if hasattr(my_courses, 'count') else len(my_courses)
+    # 🔒 Pure direct query boundary
+    my_courses = Course.objects.filter(teacher=teacher)
+    total_courses = my_courses.count()
     
-    # 2. 🗄️ 撈出這些課程在中間表（Enrollment）的所有選課紀錄
-    # 這裡直接沿用您在考勤表通過驗證的 Enrollment 模型
-    enrollments = Enrollment.objects.filter(course__in=my_courses) if my_courses else []
+    # 2. Fetch student enrollment records
+    enrollments = Enrollment.objects.filter(course__in=my_courses) if my_courses.exists() else []
     
-    # 3. 📈 動態計算平均出勤率 (與行政端織網演算法精準對齊，保留一位小數)
+    # 3. Dynamic Attendance Aggregation
     if enrollments:
         valid_attendance = [e.attendance_rate for e in enrollments if hasattr(e, 'attendance_rate') and e.attendance_rate is not None]
         avg_attendance = round(sum(valid_attendance) / len(valid_attendance), 1) if valid_attendance else 100.0
     else:
         avg_attendance = 100.0
         
-    # 4. 📝 動態計算「待評分」數量 (即 score 欄位還是 None 的學生選課紀錄)
-    if enrollments:
-        pending_count = enrollments.filter(score__isnull=True).count()
-    else:
-        pending_count = 0
+    # 4. Dynamic Pending Reviews Counter
+    pending_count = enrollments.filter(score__isnull=True).count() if enrollments else 0
         
-    # 5. 📦 打包真金白銀的數據送往前端
+    # 5. Fetch and Sort Weekly Academic Schedule
+    ordered_schedules = my_courses.order_by('day_of_week', 'time_slot')
+        
     context = {
         'teacher': teacher,
-        'total_courses': total_courses,
+        'total_courses': total_courses,       
         'avg_attendance': avg_attendance,
-        'pending_count': pending_count
+        'pending_count': pending_count,
+        'ordered_schedules': ordered_schedules,            
     }
     
-    # 🚨 備註：此處維持您原本指定的 'teachers/teacher.html' 樣板路徑
     return render(request, 'teachers/teacher.html', context)
 # @login_required(login_url='users:login')
 # def teacher_index(request):
-#     """教師端 Portal 首頁 (🔒 必須登入)"""
+#     """教師端 Portal 首頁 (🔒 必須登入 - 📊 動態儀表板數據核心)"""
 #     teacher = _get_current_teacher_or_fallback(request)
-#     return render(request, 'teachers/teacher.html', {'teacher': teacher})
+    
+#     # 1. 🎯 算出該教師名下的所有課程數量
+#     my_courses = teacher.courses.all() if hasattr(teacher, 'courses') else []
+#     total_courses = my_courses.count() if hasattr(my_courses, 'count') else len(my_courses)
+    
+#     # 2. 🗄️ 撈出這些課程在中間表（Enrollment）的所有選課紀錄
+#     # 這裡直接沿用您在考勤表通過驗證的 Enrollment 模型
+#     enrollments = Enrollment.objects.filter(course__in=my_courses) if my_courses else []
+    
+#     # 3. 📈 動態計算平均出勤率 (與行政端織網演算法精準對齊，保留一位小數)
+#     if enrollments:
+#         valid_attendance = [e.attendance_rate for e in enrollments if hasattr(e, 'attendance_rate') and e.attendance_rate is not None]
+#         avg_attendance = round(sum(valid_attendance) / len(valid_attendance), 1) if valid_attendance else 100.0
+#     else:
+#         avg_attendance = 100.0
+        
+#     # 4. 📝 動態計算「待評分」數量 (即 score 欄位還是 None 的學生選課紀錄)
+#     if enrollments:
+#         pending_count = enrollments.filter(score__isnull=True).count()
+#     else:
+#         pending_count = 0
+        
+#     # 5. 📦 打包真金白銀的數據送往前端
+#     context = {
+#         'teacher': teacher,
+#         'total_courses': total_courses,
+#         'avg_attendance': avg_attendance,
+#         'pending_count': pending_count
+#     }
+    
+#     # 🚨 備註：此處維持您原本指定的 'teachers/teacher.html' 樣板路徑
+#     return render(request, 'teachers/teacher.html', context)
 
 
 # ==========================================================

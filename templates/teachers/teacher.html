@@ -83,6 +83,103 @@
         </div>
     </div>
 
+ {% comment %} <div class="alert alert-info card-custom mb-4 border-0" style="background-color: #e3f2fd; color: #0d47a1; padding: 22px;">
+    <div class="mb-3 d-flex align-items-center">
+        <i class="fas fa-fingerprint me-2 fs-4 text-primary"></i>
+        <div>
+            <strong style="font-size: 1rem;">[ Active Authentication ]:</strong> 
+            <span class="font-monospace fw-bold text-danger" style="font-size: 1.1rem;">{{ teacher_identity_debug }}</span>
+        </div>
+    </div>
+    
+    <hr class="my-2 opacity-25" style="border-color: #0d47a1;">
+    
+    <div>
+        <div class="d-flex align-items-center mb-2">
+            <i class="fas fa-database me-2 fs-5 text-success"></i>
+            <strong style="font-size: 0.95rem;">[ Database Course Tracking & Ownership Matrix ]:</strong>
+        </div>
+        <div class="mt-1 small font-monospace text-dark py-2 px-3 rounded" style="background: rgba(255, 255, 255, 0.7); border: 1px solid #b3e5fc; max-height: 120px; overflow-y: auto; line-height: 1.6;">
+            {{ all_courses_debug_str }}
+        </div>
+        <p class="mb-0 mt-2 text-muted" style="font-size: 0.82rem;">
+            💡 <strong>Diagnostic Guide:</strong> Verify that your required courses match the <code>Teacher_ID</code> displayed above. (Note: Since your configuration is now correct, this panel serves as a permanent architectural verification tool).
+        </p>
+    </div>
+ </div> {% endcomment %}
+
+<div class="row mt-2">
+    <div class="col-12">
+        <div class="card card-custom mb-4 bg-white">
+            <div class="card-header bg-white border-0 pt-4 px-4 d-flex justify-content-between align-items-center">
+                <div>
+                    <h4 class="fw-bold text-dark m-0">
+                        <i class="fas fa-list-ul me-2 text-primary" style="color: #1e3a8a !important;"></i>Weekly Academic Schedule
+                    </h4>
+                    <p class="text-muted small m-0 mt-1">Routine educational timetable configuration for the current semester</p>
+                </div>
+                <span class="badge rounded-pill px-3 py-2" style="background-color: #c5a880; color: #fff; font-weight: 600;">
+                    Semester Schedule List
+                </span>
+            </div>
+            
+            <div class="card-body px-4 pb-4">
+                {% if ordered_schedules %}
+                    <div class="table-responsive">
+                        <table class="table table-hover align-middle border-0 m-0">
+                            <thead class="table-light text-secondary small text-uppercase" style="font-size: 0.75rem; letter-spacing: 0.05em;">
+                                <tr>
+                                    <th style="width: 25%; text-align: center;">Day of Week</th>
+                                    <th style="width: 25%;">Time Slot / Period</th>
+                                    <th style="width: 35%;">Course Details</th>
+                                    <th style="width: 15%;">Classroom</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for course in ordered_schedules %}
+                                    <tr>
+                                        <td class="text-center">
+                                            <span class="badge text-white px-3 py-2 rounded-pill fw-bold shadow-sm" style="background-color: #1e3a8a !important; font-size: 0.82rem; min-width: 100px;">
+                                                {% if course.day_of_week == 1 or course.day_of_week == '1' or course.day_of_week == 'Monday' %}Monday
+                                                {% elif course.day_of_week == 2 or course.day_of_week == '2' or course.day_of_week == 'Tuesday' %}Tuesday
+                                                {% elif course.day_of_week == 3 or course.day_of_week == '3' or course.day_of_week == 'Wednesday' %}Wednesday
+                                                {% elif course.day_of_week == 4 or course.day_of_week == '4' or course.day_of_week == 'Thursday' %}Thursday
+                                                {% elif course.day_of_week == 5 or course.day_of_week == '5' or course.day_of_week == 'Friday' %}Friday
+                                                {% elif course.day_of_week == 6 or course.day_of_week == '6' or course.day_of_week == 'Saturday' %}Saturday
+                                                {% elif course.day_of_week == 7 or course.day_of_week == '7' or course.day_of_week == 'Sunday' %}Sunday
+                                                {% else %}{{ course.get_day_of_week_display|default:course.day_of_week }}{% endif %}
+                                            </span>
+                                        </td>
+                                        <td class="fw-bold text-secondary" style="font-size: 0.9rem;">
+                                            <i class="far fa-clock me-1 text-muted"></i>
+                                            {{ course.get_time_slot_display|default:"Period " }}{{ course.time_slot }}
+                                        </td>
+                                        <td>
+                                            <div class="fw-semibold text-dark" style="font-size: 1.05rem;">{{ course.name }}</div>
+                                            <small class="text-muted font-monospace">Course Code: {{ course.code }}</small>
+                                        </td>
+                                        <td>
+                                            <span class="badge bg-light text-dark border px-2 py-1 fw-medium" style="font-size: 0.85rem;">
+                                                <i class="fas fa-map-marker-alt me-1 text-muted"></i>{{ course.classroom|default:"Not Assigned" }}
+                                            </span>
+                                        </td>
+                                    </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                {% else %}
+                    <div class="text-center py-5 bg-light rounded-3 border border-dashed my-2">
+                        <div class="text-muted mb-2"><i class="fas fa-exclamation-triangle fs-2" style="color: #c5a880;"></i></div>
+                        <h6 class="fw-bold text-dark">No Active Courses Detected</h6>
+                        <p class="text-muted small mb-0">Please verify course assignment configurations within the Academic Administration Portal.</p>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
     {% comment %} <div class="row g-4 mb-4">
         <div class="col-12 col-md-4">
             <div class="card card-custom bg-white p-4 h-100 shadow-sm" style="border-left: 5px solid #0d6efd !important;">
