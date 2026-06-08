@@ -17,6 +17,8 @@ def register_view(request):
     🚨 安全修正：新註冊的師生 is_active 預設一律為 False！
     """
     if request.method == "POST":
+        print("====== 收到 POST 資料了！ ======")
+        print(request.POST)
         role = request.POST.get('role')
         first_name = request.POST.get('first_name')
         last_name = request.POST.get('last_name')
