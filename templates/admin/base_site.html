@@ -1,0 +1,67 @@
+{% extends "admin/base.html" %}
+
+{% block title %}{{ title }} | {{ site_title|default:_('Django site admin') }}{% endblock %}
+
+{% block branding %}
+<h1 id="site-name"><a href="{% url 'admin:index' %}">{{ site_header|default:_('Django administration') }}</a></h1>
+{% endblock %}
+
+{% block extrastyle %}
+<style>
+    /* 1. 最上方的總標題列：專業學術藍 */
+    #header {
+        background-color: #1E3A8A !important; 
+    }
+
+    /* 2. 搶救文字：強制將標題與右上角選單變成純白色 */
+    #branding h1, 
+    #branding h1 a:link, 
+    #branding h1 a:visited, 
+    #header a:link, 
+    #header a:visited, 
+    #user-tools,
+    #user-tools a:link,
+    #user-tools a:visited {
+        color: #FFFFFF !important; 
+    }
+    
+    #header a:hover {
+        color: #93C5FD !important; 
+    }
+
+    /* 3. 各模組的區塊標題：明亮科技藍 */
+    .module h2, .module caption, .inline-group h2 {
+        background-color: #2563EB !important; 
+    }
+
+    /* 4. 麵包屑導覽列 (目前位置)：淺冰藍色背景 */
+    div.breadcrumbs {
+        background-color: #DBEAFE !important; 
+        color: #1E3A8A !important;
+        font-weight: bold;
+    }
+    div.breadcrumbs a {
+        color: #2563EB !important;
+    }
+
+    /* 5. 核心行動按鈕 (登入、存檔)：專業學術藍 */
+    .button.default, 
+    input[type=submit].default, 
+    .submit-row input.default,
+    .login .submit-row input[type="submit"] {
+        background-color: #1E3A8A !important; 
+        color: #FFFFFF !important;
+        border-radius: 6px; 
+        border: none;
+        font-weight: bold;
+        transition: background-color 0.2s ease; 
+        padding: 10px 15px; 
+    }
+    
+    .button.default:hover, 
+    input[type=submit].default:hover,
+    .login .submit-row input[type="submit"]:hover {
+        background-color: #2563EB !important; 
+    }
+</style>
+{% endblock %}

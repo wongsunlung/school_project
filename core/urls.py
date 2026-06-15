@@ -1,6 +1,10 @@
 from django.contrib import admin
 from django.urls import path, include
 
+admin.site.site_header = "SmartSchool 智慧管理系統"
+admin.site.site_title = "SmartSchool 後台"
+admin.site.index_title = "歡迎來到教務管理中心"
+
 urlpatterns = [
     # 1. 內建超級管理員後台
     path('admin/', admin.site.urls),
